@@ -11,6 +11,7 @@
 #include "MAGFX.h"
 #include "config.h"
 #include "regionfree.h"
+#include "logText.h"
 
 extern int debugValues[100];
 
@@ -492,7 +493,9 @@ void populateTitleMenu(menu_s* aTitleMenu, titleBrowser_s *tb, bool filter, bool
 //    return NULL;
 //}
 
-Handle titleLoadThreadHandle, titleLoadThreadRequest;
+Handle titleLoadThreadRequest;
+Thread titleLoadThread;
+
 u32 *titleLoadThreadStack;
 #define STACKSIZE (4 * 1024)
 
@@ -541,9 +544,9 @@ void titleLoadThreadFunction(void *arg) {
         svcWaitSynchronization(titleLoadThreadRequest, U64_MAX);
         svcClearEvent(titleLoadThreadRequest);
 
-        titleLoadFunction();
+		titleLoadFunction();
 
-//        logText("Returned from titleLoadFunction");
+		// logText("Returned from titleLoadFunction");
 
         if (titleLoadCancelled) {
             titleLoadCancelled = false;
@@ -556,8 +559,7 @@ void titleLoadThreadFunction(void *arg) {
 
 void releaseTitleThread() {
     svcCloseHandle(titleLoadThreadRequest);
-    svcCloseHandle(titleLoadThreadHandle);
-    free(titleLoadThreadStack);
+    threadFree(titleLoadThread);
     titleThreadNeedsRelease = false;
 }
 
@@ -565,8 +567,7 @@ void updateTitleMenu(titleBrowser_s * aTitleBrowser, menu_s * aTitleMenu, char *
     if (titlemenuIsUpdating) {
         return;
     }
-
-    titlemenuIsUpdating = true;
+	titlemenuIsUpdating = true;
     titleMenuInitialLoadDone = false;
     titleLoadCancelled = false;
 
@@ -588,10 +589,8 @@ void updateTitleMenu(titleBrowser_s * aTitleBrowser, menu_s * aTitleMenu, char *
         titleThreadNeedsRelease = true;
 
         svcCreateEvent(&titleLoadThreadRequest,0);
-        titleLoadThreadStack = memalign(32, STACKSIZE);
-        Result ret = svcCreateThread(&titleLoadThreadHandle, titleLoadThreadFunction, 0, &titleLoadThreadStack[STACKSIZE/4], 0x3f, 0);
-
-        if (ret == 0) {
+        titleLoadThread = threadCreate(titleLoadThreadFunction, 0, STACKSIZE/4, 0x3f, 0, true);
+        if (titleLoadThread != NULL) {
             svcSignalEvent(titleLoadThreadRequest);
         }
         else {
