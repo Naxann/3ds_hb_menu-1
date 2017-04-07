@@ -4,3 +4,6 @@ build/
 citra*
 user/
 CodeBlocks/
+/launcher.zip
+/boot1.3dsx
+/boot1.elf

@@ -35,7 +35,7 @@
 #include "version.h"
 #include "sound.h"
 
-u8 sdmcCurrent = 0;
+bool sdmcCurrent = 0;
 u64 nextSdCheck = 0;
 
 bool die = false;
@@ -79,9 +79,7 @@ extern void closeReboot() {
 
 extern void doReboot() {
     if (!menuret_enabled) {
-        aptOpenSession();
         APT_HardwareResetAsync();
-        aptCloseSession();
     }
     else {
         menuret = true;
@@ -793,9 +791,7 @@ int main(int argc, char *argv[])
 //    logTextP("APT Set CPU time limit", "/bootlog.txt", true);
 
 	// offset potential issues caused by homebrew that just ran
-	aptOpenSession();
 	APT_SetAppCpuTimeLimit(0);
-	aptCloseSession();
 
 //    logTextP("Init background, menu and title browser", "/bootlog.txt", true);
 
@@ -879,7 +875,8 @@ int main(int argc, char *argv[])
                 int num = 1;
                 u64* tmp = (u64*)malloc(sizeof(u64) * num);
                 u8 mediatype = 2;
-                Result ret = AM_GetTitleIdList(mediatype, num, tmp);
+				u32 num32;
+                Result ret = AM_GetTitleList(&num32, mediatype, num, tmp);
 
                 if (ret) {
                     logText("Error getting title");

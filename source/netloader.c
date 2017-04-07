@@ -311,7 +311,7 @@ int netloader_deactivate(void) {
 	if(netloader_udpfd >= 0)
 	{
 		closesocket(netloader_udpfd);
-		netloader_datafd = -1;
+		netloader_udpfd = -1;
 	}
 
 	return 0;
@@ -326,6 +326,11 @@ int load3DSX(int sock, u32 remote) {
 
 	if (len != 4) {
 		netloader_socket_error("Error getting name length", errno);
+		return -1;
+	}
+
+	if (namelen >= sizeof(filename)-1) {
+		netloader_socket_error("Filename length is too large",errno);
 		return -1;
 	}
 
@@ -388,6 +393,7 @@ int load3DSX(int sock, u32 remote) {
 
 	free(netloadedPath);
 	free(writebuffer);
+	ftruncate(fileno(file), ftell(file));
 	fclose(file);
 
 	if (response == 0) {
